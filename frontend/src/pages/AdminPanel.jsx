@@ -864,7 +864,8 @@ function SpecialAssistanceModule({ onRefresh }) {
 
   const handleEdit = (record) => {
     setEditingRecord(record);
-    setFormData(record);
+    const { allowance_standard, ...rest } = record;
+    setFormData(rest);
     setModalOpen(true);
   };
 
