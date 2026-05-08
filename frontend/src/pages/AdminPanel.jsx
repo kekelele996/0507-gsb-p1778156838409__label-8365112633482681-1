@@ -862,12 +862,6 @@ function SpecialAssistanceModule({ onRefresh }) {
     }
   };
 
-  const handleEdit = (record) => {
-    setEditingRecord(record);
-    setFormData(record);
-    setModalOpen(true);
-  };
-
   const handleDelete = async (id) => {
     try {
       const res = await fetch(`${API_URL}/special_assistance.php/${id}`, {
@@ -907,6 +901,13 @@ function SpecialAssistanceModule({ onRefresh }) {
       name: '', id_card: '', village: '', assistance_type: '分散供养',
       monthly_amount: 0, status: 'active', health_status: '健康',
     });
+    setModalOpen(true);
+  };
+
+  const handleEdit = (record) => {
+    setEditingRecord(record);
+    const { allowance_standard, ...formRecord } = record;
+    setFormData(formRecord);
     setModalOpen(true);
   };
 
