@@ -21,6 +21,15 @@ $path = $_SERVER['PATH_INFO'] ?? '/';
 // All endpoints require authentication
 $currentUser = requireAuth($conn);
 
+function mapSpecialAssistanceFields($record) {
+    $record['monthly_amount'] = $record['allowance_standard'];
+    return $record;
+}
+
+function resolveSpecialAssistanceAllowance($data) {
+    return $data['monthly_amount'] ?? $data['allowance_standard'] ?? null;
+}
+
 switch ($method) {
     case 'GET':
         if ($path === '/list' || $path === '/') {
@@ -78,11 +87,7 @@ function getSpecialAssistance($conn) {
 
     $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Map allowance_standard to monthly_amount for frontend compatibility
-    $records = array_map(function($record) {
-        $record['monthly_amount'] = $record['allowance_standard'];
-        return $record;
-    }, $records);
+    $records = array_map('mapSpecialAssistanceFields', $records);
 
     echo json_encode([
         'success' => true,
@@ -102,8 +107,7 @@ function getSpecialAssistanceRecord($conn, $id) {
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($row) {
-        // Map allowance_standard to monthly_amount for frontend compatibility
-        $row['monthly_amount'] = $row['allowance_standard'];
+        $row = mapSpecialAssistanceFields($row);
         echo json_encode(['success' => true, 'data' => $row]);
     } else {
         http_response_code(404);
@@ -153,7 +157,7 @@ function createSpecialAssistance($conn) {
         ':gender' => $data['gender'] ?? null,
         ':age' => $data['age'] ?? null,
         ':assistance_type' => $data['assistance_type'] ?? '分散供养',
-        ':allowance_standard' => $data['allowance_standard'] ?? $data['monthly_amount'] ?? null,
+        ':allowance_standard' => resolveSpecialAssistanceAllowance($data),
         ':admission_date' => $data['admission_date'] ?? null,
         ':village' => $data['village'],
         ':address' => $data['address'] ?? null,
@@ -204,7 +208,7 @@ function updateSpecialAssistance($conn, $id) {
         ':gender' => $data['gender'] ?? null,
         ':age' => $data['age'] ?? null,
         ':assistance_type' => $data['assistance_type'] ?? '分散供养',
-        ':allowance_standard' => $data['allowance_standard'] ?? $data['monthly_amount'] ?? null,
+        ':allowance_standard' => resolveSpecialAssistanceAllowance($data),
         ':admission_date' => $data['admission_date'] ?? null,
         ':village' => $data['village'],
         ':address' => $data['address'] ?? null,
