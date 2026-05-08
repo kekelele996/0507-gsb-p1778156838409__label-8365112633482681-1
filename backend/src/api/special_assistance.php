@@ -18,7 +18,6 @@ $conn = $db->getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
 $path = $_SERVER['PATH_INFO'] ?? '/';
 
-// All endpoints require authentication
 $currentUser = requireAuth($conn);
 
 switch ($method) {
@@ -45,6 +44,28 @@ switch ($method) {
     default:
         http_response_code(405);
         echo json_encode(['error' => 'Method not allowed']);
+}
+
+function normalizeMonthlyAmount($data) {
+    if (isset($data['monthly_amount']) && $data['monthly_amount'] !== '') {
+        return $data['monthly_amount'];
+    }
+    if (isset($data['allowance_standard']) && $data['allowance_standard'] !== '') {
+        return $data['allowance_standard'];
+    }
+    return null;
+}
+
+function parseJsonInput() {
+    $rawInput = file_get_contents('php://input');
+    if (!mb_check_encoding($rawInput, 'UTF-8')) {
+        $rawInput = mb_convert_encoding($rawInput, 'UTF-8', 'GBK,GB2312,UTF-8');
+    }
+    $data = json_decode($rawInput, true);
+    if ($data === null || $data === false) {
+        $data = $_POST;
+    }
+    return $data;
 }
 
 function getSpecialAssistance($conn) {
@@ -78,7 +99,6 @@ function getSpecialAssistance($conn) {
 
     $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Map allowance_standard to monthly_amount for frontend compatibility
     $records = array_map(function($record) {
         $record['monthly_amount'] = $record['allowance_standard'];
         return $record;
@@ -102,7 +122,6 @@ function getSpecialAssistanceRecord($conn, $id) {
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($row) {
-        // Map allowance_standard to monthly_amount for frontend compatibility
         $row['monthly_amount'] = $row['allowance_standard'];
         echo json_encode(['success' => true, 'data' => $row]);
     } else {
@@ -112,23 +131,8 @@ function getSpecialAssistanceRecord($conn, $id) {
 }
 
 function createSpecialAssistance($conn) {
-    // Try to get JSON input first
-    $rawInput = file_get_contents('php://input');
+    $data = parseJsonInput();
 
-    // Try to convert from other encodings to UTF-8 if needed
-    if (!mb_check_encoding($rawInput, 'UTF-8')) {
-        // Try GBK conversion (common on Windows)
-        $rawInput = mb_convert_encoding($rawInput, 'UTF-8', 'GBK,GB2312,UTF-8');
-    }
-
-    $data = json_decode($rawInput, true);
-
-    // If JSON parsing failed (null) or returned empty array, try $_POST
-    if ($data === null || $data === false) {
-        $data = $_POST;
-    }
-
-    // Validate input data
     if (empty($data)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'No data received']);
@@ -153,7 +157,7 @@ function createSpecialAssistance($conn) {
         ':gender' => $data['gender'] ?? null,
         ':age' => $data['age'] ?? null,
         ':assistance_type' => $data['assistance_type'] ?? '分散供养',
-        ':allowance_standard' => $data['allowance_standard'] ?? $data['monthly_amount'] ?? null,
+        ':allowance_standard' => normalizeMonthlyAmount($data),
         ':admission_date' => $data['admission_date'] ?? null,
         ':village' => $data['village'],
         ':address' => $data['address'] ?? null,
@@ -172,23 +176,8 @@ function createSpecialAssistance($conn) {
 }
 
 function updateSpecialAssistance($conn, $id) {
-    // Try to get JSON input first
-    $rawInput = file_get_contents('php://input');
+    $data = parseJsonInput();
 
-    // Try to convert from other encodings to UTF-8 if needed
-    if (!mb_check_encoding($rawInput, 'UTF-8')) {
-        // Try GBK conversion (common on Windows)
-        $rawInput = mb_convert_encoding($rawInput, 'UTF-8', 'GBK,GB2312,UTF-8');
-    }
-
-    $data = json_decode($rawInput, true);
-
-    // If JSON parsing failed (null) or returned empty array, try $_POST
-    if ($data === null || $data === false) {
-        $data = $_POST;
-    }
-
-    // Validate input data
     if (empty($data)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'No data received']);
@@ -204,7 +193,7 @@ function updateSpecialAssistance($conn, $id) {
         ':gender' => $data['gender'] ?? null,
         ':age' => $data['age'] ?? null,
         ':assistance_type' => $data['assistance_type'] ?? '分散供养',
-        ':allowance_standard' => $data['allowance_standard'] ?? $data['monthly_amount'] ?? null,
+        ':allowance_standard' => normalizeMonthlyAmount($data),
         ':admission_date' => $data['admission_date'] ?? null,
         ':village' => $data['village'],
         ':address' => $data['address'] ?? null,
