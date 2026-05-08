@@ -1,0 +1,37 @@
+# Apache Rewrite Rules for API Routing
+# Enables clean URL routing for the PHP backend
+
+<IfModule mod_rewrite.c>
+    # Enable Rewrite Engine
+    RewriteEngine On
+
+    # Set the base directory (adjust if backend is in subdirectory)
+    RewriteBase /
+
+    # Don't rewrite existing files (including .php files)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Redirect non-file requests to index.php
+    RewriteRule ^(.*)$ src/api/index.php [QSA,L]
+
+    # Pass Authorization header to PHP
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+# Set default character set
+AddDefaultCharset UTF-8
+
+# Protect sensitive files
+<FilesMatch "^(composer\.json|composer\.lock|\.env|\.git.*)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Pass Authorization header to CGI
+<IfModule mod_rewrite.c>
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
